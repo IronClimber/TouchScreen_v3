@@ -135,7 +135,7 @@ int main(void)
   LCD_FillScreen(BLACK);
   LCD_SetTextSize(1);
   LCD_SetTextColor(GREEN, BLACK);
-  //LCD_Printf("Hello!");
+  LCD_Printf("Hello!");
 
   /*ResetTouchScreenPinsState();
 
