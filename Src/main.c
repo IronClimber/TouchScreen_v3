@@ -135,16 +135,12 @@ int main(void)
   LCD_FillScreen(BLACK);
   LCD_SetTextSize(1);
   LCD_SetTextColor(GREEN, BLACK);
-  LCD_Printf("Hello!");
-  LCD_Printf("Hello!");
+  //LCD_Printf("Hello!");
+
   /*ResetTouchScreenPinsState();
 
   GPIO_Init();
   LCD_Printf("Hello2!");*/
-
-  SetGPIOState(&x_left, OUTPUT_RESET);
-  SetGPIOState(&x_right, OUTPUT_SET);
-  SetGPIOState(&y_up, INPUT_NOPULL);
 
 
   /* USER CODE END 2 */
@@ -159,14 +155,9 @@ int main(void)
   while (1)
   {
 	  if (start_measure != 0) {
-
-		  SetPins(TOUCH_MEASURE_X);
-		  x = ADC1_GetValue(ADC_CHANNEL_4);
-		  SetPins(TOUCH_MEASURE_Y);
-		  y = ADC1_GetValue(ADC_CHANNEL_1);
 		  SetPins(TOUCH_OFF);
 		  LCD_SetCursor(0,0);
-		  LCD_Printf("X: %4d Y: %4d", x, y);
+		  LCD_Printf("TOUCH    ");
 		  start_measure = 0;
 		  SetPins(TOUCH_DETECT);
 	  } else {
@@ -175,7 +166,7 @@ int main(void)
 		  LCD_Printf("NOT TOUCH");
 		  SetPins(TOUCH_DETECT);
 	  }
-	  HAL_Delay(100);
+	  HAL_Delay(10);
 
 	  //ResetTouchScreenPinsState();
 

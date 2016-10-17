@@ -73,10 +73,10 @@ void SysTick_Handler(void)
 void EXTI4_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI4_IRQn 0 */
-	if 	  (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_4) != RESET && (HAL_GetTick() - tick_start) < 50) {
+	if 	  (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_4) != RESET /*&& (HAL_GetTick() - tick_start) > 50*/) {
 		tick_start = HAL_GetTick();
-		if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_4) != 0) start_measure = 1;
-		else start_measure = 0;
+		if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) start_measure = 0;
+		else start_measure = 1;
 	}
 
 
