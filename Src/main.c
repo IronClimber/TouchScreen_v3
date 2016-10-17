@@ -40,6 +40,14 @@
 #include "display\lcd.h"
 #include "LiquidCrystal_I2C.h"
 
+#define X_A 13.18
+#define X_B 450
+#define Y_A 10.3
+#define Y_B 340
+
+#define X_BORDER 240
+#define Y_BORDER 320
+
 typedef struct {
 	GPIO_TypeDef* Port;
 	uint16_t Pin;
@@ -66,7 +74,7 @@ typedef enum {
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 GPIOStruct x_left, x_right, y_up, y_down;
-uint32_t x, y;
+uint32_t x, y, previous_x, previous_y;
 uint8_t start_measure = 0;
 /* USER CODE END PV */
 
@@ -76,7 +84,11 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+uint32_t GetTouch_X();
+uint32_t GetTouch_Y();
+
 uint32_t ADC1_GetValue(uint32_t channel);
+
 HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
 HAL_StatusTypeDef ResetTouchScreenPinsState();
 HAL_StatusTypeDef SetPins(TouchScreenState state);
@@ -108,6 +120,8 @@ int main(void)
   MX_I2C1_Init();
 
   /* USER CODE BEGIN 2 */
+
+
   // X-
   x_left.Port = GPIOA;
   x_left.Pin = GPIO_PIN_4;
@@ -125,23 +139,12 @@ int main(void)
   y_down.Pin = GPIO_PIN_1;
 
 
-  LiquidCrystal_I2C_Init(&hi2c1, 0x3f, 16, 2, LCD_5x8DOTS);
-  LiquidCrystal_I2C_SetBacklight(1);
-  LiquidCrystal_I2C_Cursor();
-  LiquidCrystal_I2C_Blink();
-  LiquidCrystal_I2C_SetCursor(6,1);
-  LiquidCrystal_I2C_PrintString("*BOOM!*");
+
+
   LCD_Init();
   LCD_FillScreen(BLACK);
   LCD_SetTextSize(1);
   LCD_SetTextColor(GREEN, BLACK);
-  //LCD_Printf("Hello!");
-
-  /*ResetTouchScreenPinsState();
-
-  GPIO_Init();
-  LCD_Printf("Hello2!");*/
-
 
   /* USER CODE END 2 */
 
@@ -155,34 +158,24 @@ int main(void)
   while (1)
   {
 	  if (start_measure != 0) {
+
+		  SetPins(TOUCH_MEASURE_X);
+		  x = GetTouch_X();
+		  SetPins(TOUCH_MEASURE_Y);
+		  y = GetTouch_Y();
 		  SetPins(TOUCH_OFF);
 		  LCD_SetCursor(0,0);
-		  LCD_Printf("TOUCH    ");
+		  LCD_Printf("X: %4d Y: %4d", x, y);
+		  //LCD_DrawPixel(x,y,WHITE);
 		  start_measure = 0;
 		  SetPins(TOUCH_DETECT);
 	  } else {
 		  SetPins(TOUCH_OFF);
 		  LCD_SetCursor(0,0);
-		  LCD_Printf("NOT TOUCH");
+		  LCD_Printf("NOT TOUCH               ");
 		  SetPins(TOUCH_DETECT);
 	  }
-	  HAL_Delay(10);
-
-	  //ResetTouchScreenPinsState();
-
-
-	/*  sprintf(str, "%d  ", ADC1_GetValue(ADC_CHANNEL_1));
-	  GPIO_Init();
-	  LCD_SetCursor(0,0);
-	  LCD_Printf("X: %s   ", str);
-
-
-
-	  sprintf(str, "%d  ", ADC1_GetValue(ADC_CHANNEL_4));
-	  GPIO_Init();
-	  LCD_Printf("Y: %s\n", str);
-	  LiquidCrystal_I2C_PrintString(str);
-	  HAL_Delay(300);*/
+	  HAL_Delay(100);
 
   /* USER CODE END WHILE */
 
@@ -330,6 +323,7 @@ HAL_StatusTypeDef SetPins(TouchScreenState state) {
 			SetGPIOState(&x_left, INPUT_PULLUP_EXTI);
 			SetGPIOState(&x_right, INPUT_NOPULL);
 			SetGPIOState(&y_up, OUTPUT_RESET);
+
 			SetGPIOState(&y_down, INPUT_NOPULL);
 			return HAL_OK;
 		case TOUCH_MEASURE_X:
@@ -347,6 +341,20 @@ HAL_StatusTypeDef SetPins(TouchScreenState state) {
 		default:
 			return HAL_ERROR;
 	}
+}
+
+uint32_t GetTouch_X() {
+	int32_t x_val = (X_BORDER-(ADC1_GetValue(ADC_CHANNEL_4)-X_B)/(X_A));
+	if (x_val>X_BORDER) return (uint32_t) X_BORDER;
+	else if (x_val<0) return 0;
+	else return (uint32_t) x_val;
+}
+
+uint32_t GetTouch_Y() {
+	int32_t y_val = ((ADC1_GetValue(ADC_CHANNEL_1)-Y_B)/(Y_A));
+	if (y_val>Y_BORDER) return (uint32_t) Y_BORDER;
+	else if (y_val<0) return 0;
+	else return (uint32_t) y_val;
 }
 
 /* USER CODE END 4 */
