@@ -33,12 +33,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "adc.h"
-#include "i2c.h"
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
 #include "display\lcd.h"
-#include "LiquidCrystal_I2C.h"
 
 #define X_A 13.18
 #define X_B 450
@@ -48,10 +46,20 @@
 #define X_BORDER 240
 #define Y_BORDER 320
 
+#define BACKGROUND_COLOR BLACK
+
 typedef struct {
 	GPIO_TypeDef* Port;
 	uint16_t Pin;
 } GPIOStruct;
+
+typedef struct {
+	int32_t x;
+	int32_t y;
+	uint32_t edge;
+	uint16_t color;
+	uint8_t move;
+} SquareStruct;
 
 typedef enum {
 	OUTPUT_RESET = 0,
@@ -75,7 +83,10 @@ typedef enum {
 /* Private variables ---------------------------------------------------------*/
 GPIOStruct x_left, x_right, y_up, y_down;
 uint32_t x, y, previous_x, previous_y;
-uint8_t start_measure = 0;
+int32_t ref_x = 0;
+int32_t ref_y = 0;
+volatile uint8_t start_measure = 0;
+uint8_t touch_continue = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,6 +103,14 @@ uint32_t ADC1_GetValue(uint32_t channel);
 HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
 HAL_StatusTypeDef ResetTouchScreenPinsState();
 HAL_StatusTypeDef SetPins(TouchScreenState state);
+
+void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color);
+void PrintSquare(SquareStruct* sq);
+void ClearSquare(SquareStruct* sq);
+void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my);
+
+uint8_t IsSquareSelect(SquareStruct* sq);
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -117,11 +136,26 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  MX_I2C1_Init();
 
   /* USER CODE BEGIN 2 */
 
-
+  /*Set TouchScreen Pins
+  	  	  	(Y-)
+  	  	  	 |
+  	  ----------------
+  	  |              |
+  	  |              |
+  	  |              |
+  	  |              |
+(X-)--|              |--(X+)
+  	  |              |
+  	  |              |
+  	  |              |
+  	  |              |
+  	  ----------------
+  	         |
+  	        (Y+)
+  */
   // X-
   x_left.Port = GPIOA;
   x_left.Pin = GPIO_PIN_4;
@@ -138,22 +172,20 @@ int main(void)
   y_down.Port = GPIOA;
   y_down.Pin = GPIO_PIN_1;
 
-
-
-
+  // LCD Init
   LCD_Init();
-  LCD_FillScreen(BLACK);
+  LCD_FillScreen(BACKGROUND_COLOR);
   LCD_SetTextSize(1);
-  LCD_SetTextColor(GREEN, BLACK);
+  LCD_SetTextColor(GREEN, BACKGROUND_COLOR);
+
+  // Square Init
+  SquareStruct touch_square;
+  InitSquare(&touch_square, 100, 100, 50, GREEN);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  //uint8_t str[10] = "Priv";
-  //uint8_t i = 0;
-
-  SetPins(TOUCH_DETECT);
 
   while (1)
   {
@@ -164,18 +196,38 @@ int main(void)
 		  SetPins(TOUCH_MEASURE_Y);
 		  y = GetTouch_Y();
 		  SetPins(TOUCH_OFF);
+
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("X: %4d Y: %4d", x, y);
-		  //LCD_DrawPixel(x,y,WHITE);
+
+		  if (IsSquareSelect(&touch_square)) {
+
+			  if (touch_square.move != RESET)
+				  MoveSquare(&touch_square, x-ref_y, y-ref_x);
+
+			  else {
+
+				  touch_square.move = SET;
+
+				  ref_x = x-touch_square.x;
+				  ref_y = y-touch_square.y;
+
+			  }
+		  }
+
 		  start_measure = 0;
 		  SetPins(TOUCH_DETECT);
+
 	  } else {
+
 		  SetPins(TOUCH_OFF);
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("NOT TOUCH               ");
 		  SetPins(TOUCH_DETECT);
+
 	  }
-	  HAL_Delay(100);
+
+	  HAL_Delay(50);
 
   /* USER CODE END WHILE */
 
@@ -357,6 +409,34 @@ uint32_t GetTouch_Y() {
 	else return (uint32_t) y_val;
 }
 
+void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color) {
+	sq->x = sq_x;
+	sq->y = sq_y;
+	sq->edge = sq_edge;
+	sq->color = sq_color;
+	sq->move = RESET;
+	PrintSquare(sq);
+}
+
+void PrintSquare(SquareStruct* sq) {
+	LCD_FillRect(sq->x, sq->y, sq->edge, sq->edge, sq->color);
+}
+
+void ClearSquare(SquareStruct* sq) {
+	LCD_FillRect(sq->x, sq->y, sq->edge, sq->edge, BACKGROUND_COLOR);
+}
+
+void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my) {
+	ClearSquare(sq);
+	sq->x = mx;
+	sq->y = my;
+	PrintSquare(sq);
+}
+
+uint8_t IsSquareSelect(SquareStruct* sq) {
+	if (x>=sq->x && x<=sq->x+sq->edge && y>=sq->y && y<=sq->y+sq->edge) return 1;
+	else return 0;
+}
 /* USER CODE END 4 */
 
 /**
