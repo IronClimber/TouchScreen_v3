@@ -37,56 +37,27 @@
 
 /* USER CODE BEGIN Includes */
 #include "display\lcd.h"
-
-#define X_A 13.18
-#define X_B 450
-#define Y_A 10.3
-#define Y_B 340
-
-#define X_BORDER 240
-#define Y_BORDER 320
+#include "TouchScreen.h"
+#include "Square.h"
+#include "ADC1.h"
 
 #define BACKGROUND_COLOR BLACK
 
-typedef struct {
-	GPIO_TypeDef* Port;
-	uint16_t Pin;
-} GPIOStruct;
-
-typedef struct {
-	int32_t x;
-	int32_t y;
-	uint32_t edge;
-	uint16_t color;
-	uint8_t move;
-} SquareStruct;
-
-typedef enum {
-	OUTPUT_RESET = 0,
-	OUTPUT_SET = 1,
-	INPUT_PULLUP_EXTI = 2,
-	INPUT_NOPULL = 3,
-	INPUT_ADC= 4
-} GPIOState;
-
-typedef enum {
-	TOUCH_OFF = 0,
-	TOUCH_DETECT = 1,
-	TOUCH_MEASURE_X = 2,
-	TOUCH_MEASURE_Y = 3
-} TouchScreenState;
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-GPIOStruct x_left, x_right, y_up, y_down;
-uint32_t x, y, previous_x, previous_y;
-int32_t ref_x = 0;
-int32_t ref_y = 0;
+
+uint32_t x_touch = 0;
+uint32_t y_touch = 0;
+//previous_x, previous_y;
+int32_t x_ref = 0;
+int32_t y_ref = 0;
+
 volatile uint8_t start_measure = 0;
-uint8_t touch_continue = 0;
+//uint8_t touch_continue = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,21 +66,6 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-uint32_t GetTouch_X();
-uint32_t GetTouch_Y();
-
-uint32_t ADC1_GetValue(uint32_t channel);
-
-HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
-HAL_StatusTypeDef ResetTouchScreenPinsState();
-HAL_StatusTypeDef SetPins(TouchScreenState state);
-
-void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color);
-void PrintSquare(SquareStruct* sq);
-void ClearSquare(SquareStruct* sq);
-void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my);
-
-uint8_t IsSquareSelect(SquareStruct* sq);
 
 /* USER CODE END PFP */
 
@@ -139,44 +95,14 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  /*Set TouchScreen Pins
-  	  	  	(Y-)
-  	  	  	 |
-  	  ----------------
-  	  |              |
-  	  |              |
-  	  |              |
-  	  |              |
-(X-)--|              |--(X+)
-  	  |              |
-  	  |              |
-  	  |              |
-  	  |              |
-  	  ----------------
-  	         |
-  	        (Y+)
-  */
-  // X-
-  x_left.Port = GPIOA;
-  x_left.Pin = GPIO_PIN_4;
-
-  // X+
-  x_right.Port = GPIOB;
-  x_right.Pin = GPIO_PIN_10;
-
-  // Y-
-  y_up.Port = GPIOA;
-  y_up.Pin = GPIO_PIN_8;
-
-  // Y+
-  y_down.Port = GPIOA;
-  y_down.Pin = GPIO_PIN_1;
-
   // LCD Init
   LCD_Init();
   LCD_FillScreen(BACKGROUND_COLOR);
   LCD_SetTextSize(1);
   LCD_SetTextColor(GREEN, BACKGROUND_COLOR);
+
+  // TouchScreen Init
+  TouchScreen_Init();
 
   // Square Init
   SquareStruct touch_square;
@@ -192,25 +118,25 @@ int main(void)
 	  if (start_measure != 0) {
 
 		  SetPins(TOUCH_MEASURE_X);
-		  x = GetTouch_X();
+		  x_touch = GetTouch_X();
 		  SetPins(TOUCH_MEASURE_Y);
-		  y = GetTouch_Y();
+		  y_touch = GetTouch_Y();
 		  SetPins(TOUCH_OFF);
 
 		  LCD_SetCursor(0,0);
-		  LCD_Printf("X: %4d Y: %4d", x, y);
+		  LCD_Printf("X: %4d Y: %4d", x_touch, y_touch);
 
-		  if (IsSquareSelect(&touch_square)) {
+		  if (IsSquareSelect(&touch_square, x_touch, y_touch)) {
 
 			  if (touch_square.move != RESET)
-				  MoveSquare(&touch_square, x-ref_y, y-ref_x);
+				  MoveSquare(&touch_square, x_touch-y_ref, y_touch-x_ref);
 
 			  else {
 
 				  touch_square.move = SET;
 
-				  ref_x = x-touch_square.x;
-				  ref_y = y-touch_square.y;
+				  x_ref = x_touch-touch_square.x;
+				  y_ref = y_touch-touch_square.y;
 
 			  }
 		  }
@@ -290,153 +216,8 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-uint32_t ADC1_GetValue(uint32_t channel){
 
-	ADC_ChannelConfTypeDef sConfig;
 
-    sConfig.Channel = channel;
-    sConfig.Rank = 1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-    	Error_Handler();
-    }
-
-    // start conversion
-    HAL_ADC_Start(&hadc1);
-    // wait until finish
-    HAL_ADC_PollForConversion(&hadc1, 100);
-    uint32_t value = HAL_ADC_GetValue(&hadc1);
-    HAL_ADC_Stop(&hadc1);
-    return value;
-}
-
-HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state) {
-	HAL_GPIO_DeInit(str->Port, str->Pin);
-	GPIO_InitTypeDef GPIO_InitStruct;
-
-	switch (state) {
-	case OUTPUT_RESET:
-		GPIO_InitStruct.Pin = str->Pin;
-		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-		GPIO_InitStruct.Pull = GPIO_NOPULL;                         //??
-		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;				//??
-		HAL_GPIO_Init(str->Port, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(str->Port, str->Pin, GPIO_PIN_RESET);
-		return HAL_OK;
-	case OUTPUT_SET:
-		GPIO_InitStruct.Pin = str->Pin;
-		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-		GPIO_InitStruct.Pull = GPIO_NOPULL;                         //??
-		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;				//??
-		HAL_GPIO_Init(str->Port, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(str->Port, str->Pin, GPIO_PIN_SET);
-		return HAL_OK;
-	case INPUT_PULLUP_EXTI:
-		GPIO_InitStruct.Pin = str->Pin;
-		GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-		GPIO_InitStruct.Pull = GPIO_PULLUP;
-		HAL_GPIO_Init(str->Port, &GPIO_InitStruct);
-		HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0); //EXTI4 because we use PA4 (X-) to detect touch
-		HAL_NVIC_EnableIRQ(EXTI4_IRQn);			//If you use other pin, you need change EXTI
-		return HAL_OK;
-	case INPUT_NOPULL:
-		GPIO_InitStruct.Pin = str->Pin;
-		GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-		GPIO_InitStruct.Pull = GPIO_NOPULL;
-		HAL_GPIO_Init(str->Port, &GPIO_InitStruct);
-		return HAL_OK;
-	case INPUT_ADC:
-	    GPIO_InitStruct.Pin = str->Pin;
-	    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-	    GPIO_InitStruct.Pull = GPIO_NOPULL;
-	    HAL_GPIO_Init(str->Port, &GPIO_InitStruct);
-	    return HAL_OK;
-	default:
-		return HAL_ERROR;
-	}
-}
-
-HAL_StatusTypeDef ResetTouchScreenPinsState() {
-	HAL_GPIO_DeInit(x_left.Port, x_left.Pin);
-	HAL_GPIO_DeInit(x_right.Port, x_right.Pin);
-	HAL_GPIO_DeInit(y_up.Port, y_up.Pin);
-	HAL_GPIO_DeInit(y_down.Port, y_down.Pin);
-	return HAL_OK;
-}
-
-HAL_StatusTypeDef SetPins(TouchScreenState state) {
-	switch (state) {
-		case TOUCH_OFF:
-			GPIO_Init();
-			return HAL_OK;
-		case TOUCH_DETECT:
-			SetGPIOState(&x_left, INPUT_PULLUP_EXTI);
-			SetGPIOState(&x_right, INPUT_NOPULL);
-			SetGPIOState(&y_up, OUTPUT_RESET);
-
-			SetGPIOState(&y_down, INPUT_NOPULL);
-			return HAL_OK;
-		case TOUCH_MEASURE_X:
-			SetGPIOState(&x_left, INPUT_ADC);
-			SetGPIOState(&x_right, INPUT_NOPULL);
-			SetGPIOState(&y_up, OUTPUT_SET);
-			SetGPIOState(&y_down, OUTPUT_RESET);
-			return HAL_OK;
-		case TOUCH_MEASURE_Y:
-			SetGPIOState(&x_left, OUTPUT_RESET);
-			SetGPIOState(&x_right, OUTPUT_SET);
-			SetGPIOState(&y_up, INPUT_NOPULL);
-			SetGPIOState(&y_down, INPUT_ADC);
-			return HAL_OK;
-		default:
-			return HAL_ERROR;
-	}
-}
-
-uint32_t GetTouch_X() {
-	int32_t x_val = (X_BORDER-(ADC1_GetValue(ADC_CHANNEL_4)-X_B)/(X_A));
-	if (x_val>X_BORDER) return (uint32_t) X_BORDER;
-	else if (x_val<0) return 0;
-	else return (uint32_t) x_val;
-}
-
-uint32_t GetTouch_Y() {
-	int32_t y_val = ((ADC1_GetValue(ADC_CHANNEL_1)-Y_B)/(Y_A));
-	if (y_val>Y_BORDER) return (uint32_t) Y_BORDER;
-	else if (y_val<0) return 0;
-	else return (uint32_t) y_val;
-}
-
-void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color) {
-	sq->x = sq_x;
-	sq->y = sq_y;
-	sq->edge = sq_edge;
-	sq->color = sq_color;
-	sq->move = RESET;
-	PrintSquare(sq);
-}
-
-void PrintSquare(SquareStruct* sq) {
-	LCD_FillRect(sq->x, sq->y, sq->edge, sq->edge, sq->color);
-}
-
-void ClearSquare(SquareStruct* sq) {
-	LCD_FillRect(sq->x, sq->y, sq->edge, sq->edge, BACKGROUND_COLOR);
-}
-
-void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my) {
-	ClearSquare(sq);
-	sq->x = mx;
-	sq->y = my;
-	PrintSquare(sq);
-}
-
-uint8_t IsSquareSelect(SquareStruct* sq) {
-	if (x>=sq->x && x<=sq->x+sq->edge && y>=sq->y && y<=sq->y+sq->edge) return 1;
-	else return 0;
-}
 /* USER CODE END 4 */
 
 /**
