@@ -26,6 +26,7 @@ typedef struct {
 	uint8_t move;
 	uint32_t touch_point_x;
 	uint32_t touch_point_y;
+	SquareCatchStatus state;
 } SquareStruct;
 
 void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color);
@@ -35,4 +36,8 @@ void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my);
 
 uint8_t IsSquareSelect(SquareStruct* sq, uint32_t x, uint32_t y);
 
+SquareCatchStatus IsCatch(SquareStruct* sq);
+
+void CatchSquare(SquareStruct* sq);
+void ReleaseSquare(SquareStruct* sq);
 #endif /* SQUARE_H_ */

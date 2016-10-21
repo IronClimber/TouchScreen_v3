@@ -39,3 +39,15 @@ uint8_t IsSquareSelect(SquareStruct* sq, uint32_t x, uint32_t y) {
 	if (x>=sq->x && x<=sq->x+sq->edge && y>=sq->y && y<=sq->y+sq->edge) return 1;
 	else return 0;
 }
+
+SquareCatchStatus IsCatch(SquareStruct* sq) {
+	return sq->state;
+}
+
+void CatchSquare(SquareStruct* sq) {
+	sq->state = CATCH;
+}
+
+void ReleaseSquare(SquareStruct* sq) {
+	sq->state = RELEASE;
+}
