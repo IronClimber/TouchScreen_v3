@@ -13,6 +13,11 @@
 
 #define BACKGROUND_COLOR BLACK
 
+typedef enum {
+	CATCH = 1,
+	RELEASE = 0
+} SquareCatchStatus;
+
 typedef struct {
 	int32_t x;
 	int32_t y;
