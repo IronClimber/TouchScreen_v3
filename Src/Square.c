@@ -14,6 +14,8 @@ void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, 
 	sq->edge = sq_edge;
 	sq->color = sq_color;
 	sq->move = RESET;
+	sq->touch_point_x = 0;
+	sq->touch_point_y = 0;
 	PrintSquare(sq);
 }
 

@@ -19,6 +19,8 @@ typedef struct {
 	uint32_t edge;
 	uint16_t color;
 	uint8_t move;
+	uint32_t touch_point_x;
+	uint32_t touch_point_y;
 } SquareStruct;
 
 void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color);

@@ -48,7 +48,7 @@ typedef enum {
 } TouchScreenState;
 
 void TouchScreen_Init();
-void TouchScreen_Calib(uint32_t x_border, uint32_t y_border);
+void TouchScreen_Calib();
 
 HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
 HAL_StatusTypeDef ResetTouchScreenPinsState();
@@ -56,5 +56,10 @@ HAL_StatusTypeDef SetPins(TouchScreenState state);
 
 uint32_t GetTouch_X();
 uint32_t GetTouch_Y();
+
+void MeasureCalibXY();
+
+uint32_t GetCalib_X();
+uint32_t GetCalib_Y();
 
 #endif /* TOUCHSCREEN_H_ */

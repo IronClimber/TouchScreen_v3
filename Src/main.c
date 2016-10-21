@@ -103,6 +103,7 @@ int main(void)
 
   // TouchScreen Init
   TouchScreen_Init();
+  //TouchScreen_Calib();
 
   // Square Init
   SquareStruct touch_square;
@@ -115,19 +116,29 @@ int main(void)
 
   while (1)
   {
+
 	  if (start_measure != 0) {
 
 		  SetPins(TOUCH_MEASURE_X);
 		  x_touch = GetTouch_X();
+		  uint32_t xadc = ADC1_GetValue(ADC_CHANNEL_4);
 		  SetPins(TOUCH_MEASURE_Y);
 		  y_touch = GetTouch_Y();
+		  uint32_t yadc = ADC1_GetValue(ADC_CHANNEL_1);
 		  SetPins(TOUCH_OFF);
 
+		  /*MeasureCalibXY();
+
+		  x_touch = GetCalib_X();
+		  y_touch = GetCalib_Y();*/
+
 		  LCD_SetCursor(0,0);
-		  LCD_Printf("X: %4d Y: %4d", x_touch, y_touch);
+		  LCD_Printf("X: %4d Y: %4d\n", x_touch, y_touch);
+		  LCD_Printf("SX: %4d SY: %4d\n", touch_square.x, touch_square.y);
+		  //LCD_Printf("xadc %d yadc %d", xadc, yadc);
 
 		  if (IsSquareSelect(&touch_square, x_touch, y_touch)) {
-
+			  LCD_Printf("Square Select: +\n");
 			  if (touch_square.move != RESET)
 				  MoveSquare(&touch_square, x_touch-y_ref, y_touch-x_ref);
 
@@ -138,9 +149,18 @@ int main(void)
 				  x_ref = x_touch-touch_square.x;
 				  y_ref = y_touch-touch_square.y;
 
+				  LCD_Printf("x_ref = %d y_ref = %d       \n", x_ref, y_ref);
+
+				  //MoveSquare(&touch_square, x_touch-y_ref, y_touch-x_ref);
+
 			  }
 		  }
+		  else {
+			  touch_square.move = RESET;
+			  LCD_Printf("Square Select: -\n");
 
+		  }
+		  //LCD_Printf("Square Move Status: %d   \n", touch_square.move);
 		  start_measure = 0;
 		  SetPins(TOUCH_DETECT);
 
@@ -148,14 +168,12 @@ int main(void)
 
 		  SetPins(TOUCH_OFF);
 		  LCD_SetCursor(0,0);
-		  LCD_Printf("NOT TOUCH               ");
+		  LCD_Printf("NOT TOUCH           \n");
+		  LCD_Printf("SX: %4d SY: %4d\n", touch_square.x, touch_square.y);
+		  //touch_square.move = RESET;
 		  SetPins(TOUCH_DETECT);
 
-	  }
 
-	  HAL_Delay(50);
-
-  /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
 
