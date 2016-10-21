@@ -11,8 +11,8 @@
 
 GPIOStruct x_left, x_right, y_up, y_down;
 
-static x = 0;
-static y = 0;
+volatile static int32_t x = 0;
+volatile static int32_t y = 0;
 
 TouchScreenStruct ts_h;
 /*Set TouchScreen Pins
@@ -55,19 +55,22 @@ void TouchScreen_Init() {
 }
 
 void TouchScreen_Calib() {
-	uint32_t x1 = 10;
-	uint32_t y1 = 100;
-	uint32_t x2 = 77;
-	uint32_t y2 = 300;
-	uint32_t x3 = 200;
-	uint32_t y3 = 15;
+	int32_t x1 = 10;
+	int32_t y1 = 100;
+	int32_t x2 = 77;
+	int32_t y2 = 300;
+	int32_t x3 = 200;
+	int32_t y3 = 15;
 
 	SetPins(TOUCH_OFF);
+	LCD_SetCursor(20,150);
+	LCD_Printf("Starting calibration process...");
+	HAL_Delay(1500);
 	LCD_SetCursor(0,0);
-	LCD_Printf("Set first point");
+	LCD_FillScreen(BLACK);
+	LCD_Printf("SET FIRST POINT   ");
 	//LCD_DrawPixel(x1,y1);
-	LCD_DrawFastHLine(x1-5, y1, 10, WHITE);
-	LCD_DrawFastVLine(x1, y1-5, 10, WHITE);
+	DrawTarget(x1,y1,WHITE);
 	SetPins(TOUCH_DETECT);
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
 	SetPins(TOUCH_MEASURE_X);
@@ -75,11 +78,14 @@ void TouchScreen_Calib() {
 	SetPins(TOUCH_MEASURE_Y);
 	uint32_t ty1 = ADC1_GetValue(ADC_CHANNEL_1);
 	SetPins(TOUCH_OFF);
+	DrawTarget(x1,y1,RED);
+	HAL_Delay(500);
+	CleanTarget(x1,y1);
+
 	LCD_SetCursor(0,0);
 	HAL_Delay(1000);
-	LCD_Printf("Set second point");
-	LCD_DrawFastHLine(x2-5, y2, 10, WHITE);
-	LCD_DrawFastVLine(x2, y2-5, 10, WHITE);
+	LCD_Printf("SET SECOND POINT   ");
+	DrawTarget(x2,y2,WHITE);
 	SetPins(TOUCH_DETECT);
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
 	SetPins(TOUCH_MEASURE_X);
@@ -87,12 +93,15 @@ void TouchScreen_Calib() {
 	SetPins(TOUCH_MEASURE_Y);
 	uint32_t ty2 = ADC1_GetValue(ADC_CHANNEL_1);
 	SetPins(TOUCH_OFF);
+	DrawTarget(x2,y2,RED);
+	HAL_Delay(500);
+	CleanTarget(x2,y2);
+
 	LCD_SetCursor(0,0);
 	HAL_Delay(1000);
-	LCD_Printf("Set third point");
+	LCD_Printf("SET THIRD POINT   ");
 	//LCD_DrawPixel(x3,y3);
-	LCD_DrawFastHLine(x3-5, y3, 10, WHITE);
-	LCD_DrawFastVLine(x3, y3-5, 10, WHITE);
+	DrawTarget(x3,y3,WHITE);
 	SetPins(TOUCH_DETECT);
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
 	SetPins(TOUCH_MEASURE_X);
@@ -100,6 +109,10 @@ void TouchScreen_Calib() {
 	SetPins(TOUCH_MEASURE_Y);
 	uint32_t ty3 = ADC1_GetValue(ADC_CHANNEL_1);
 	SetPins(TOUCH_OFF);
+	DrawTarget(x3,y3,RED);
+	HAL_Delay(500);
+	CleanTarget(x3,y3);
+
 	HAL_Delay(1000);
 	LCD_FillScreen(BLACK);
 	LCD_SetCursor(100,150);
@@ -223,20 +236,14 @@ HAL_StatusTypeDef SetPins(TouchScreenState state) {
 	}
 }
 
-uint32_t GetTouch_X() {
+int32_t GetTouch_X() {
 	int32_t x_val = (X_BORDER-(ADC1_GetValue(ADC_CHANNEL_4)-X_B)/(X_A));
-	//if (x_val>X_BORDER) return (uint32_t) X_BORDER;
-	//else if (x_val<0) return 0;
-	//else
-		return (uint32_t) x_val;
+	return (int32_t) x_val;
 }
 
-uint32_t GetTouch_Y() {
+int32_t GetTouch_Y() {
 	int32_t y_val = ((ADC1_GetValue(ADC_CHANNEL_1)-Y_B)/(Y_A));
-	//if (y_val>Y_BORDER) return (uint32_t) Y_BORDER;
-	//else if (y_val<0) return 0;
-	//else
-		return (uint32_t) y_val;
+	return (int32_t) y_val;
 }
 
 void MeasureCalibXY() {
@@ -249,19 +256,23 @@ void MeasureCalibXY() {
 	  x = ts_h.ax*x_t + ts_h.bx*y_t + ts_h.dx;
 	  y = ts_h.ay*x_t + ts_h.by*y_t + ts_h.dy;
 
-	/*int32_t x_val = X_BORDER-(ADC1_GetValue(ADC_CHANNEL_4)*);
-	if (x_val>ts_h.x_border) return (uint32_t) ts_h.x_border;
-	else if (x_val<0) return 0;
-	else return (uint32_t) x_val;*/
 }
 
-uint32_t GetCalib_X() {
+int32_t GetCalib_X() {
 	return x;
 }
 
-uint32_t GetCalib_Y() {
+int32_t GetCalib_Y() {
 	return y;
 }
-/*uint32_t MeasureTouch_X() {
 
-}*/
+void DrawTarget(int32_t target_x, int32_t target_y, uint16_t color) {
+	LCD_DrawFastHLine(target_x-4, target_y, 9, color);
+	LCD_DrawFastVLine(target_x, target_y-4, 9, color);
+}
+
+void CleanTarget(int32_t target_x, int32_t target_y) {
+	LCD_DrawFastHLine(target_x-4, target_y, 9, BLACK);
+	LCD_DrawFastVLine(target_x, target_y-4, 9, BLACK);
+}
+

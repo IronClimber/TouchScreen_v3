@@ -19,22 +19,22 @@ typedef enum {
 } SquareCatchStatus;
 
 typedef struct {
-	int32_t x;
-	int32_t y;
-	uint32_t edge;
+	volatile int32_t x;
+	volatile int32_t y;
+	int32_t edge;
 	uint16_t color;
-	uint8_t move;
-	uint32_t touch_point_x;
-	uint32_t touch_point_y;
+	//uint8_t move;
+	//uint32_t touch_point_x;
+	//uint32_t touch_point_y;
 	SquareCatchStatus state;
 } SquareStruct;
 
-void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, uint32_t sq_edge, uint16_t sq_color);
+void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, int32_t sq_edge, uint16_t sq_color);
 void PrintSquare(SquareStruct* sq);
 void ClearSquare(SquareStruct* sq);
 void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my);
 
-uint8_t IsSquareSelect(SquareStruct* sq, uint32_t x, uint32_t y);
+int8_t IsSquareSelect(SquareStruct* sq, int32_t x, int32_t y);
 
 SquareCatchStatus IsCatch(SquareStruct* sq);
 

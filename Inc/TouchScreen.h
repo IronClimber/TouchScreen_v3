@@ -24,9 +24,9 @@ typedef struct {
 } GPIOStruct;
 
 typedef struct {
-	uint32_t x, y;
-	uint32_t tx, ty;
-	uint32_t x_border, y_border;
+	volatile int32_t x, y;
+	//uint32_t tx, ty;
+	//uint32_t x_border, y_border;
 	float ax, ay;
 	float bx, by;
 	float dx, dy;
@@ -54,12 +54,15 @@ HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
 HAL_StatusTypeDef ResetTouchScreenPinsState();
 HAL_StatusTypeDef SetPins(TouchScreenState state);
 
-uint32_t GetTouch_X();
-uint32_t GetTouch_Y();
+int32_t GetTouch_X();
+int32_t GetTouch_Y();
 
 void MeasureCalibXY();
 
-uint32_t GetCalib_X();
-uint32_t GetCalib_Y();
+int32_t GetCalib_X();
+int32_t GetCalib_Y();
+
+void DrawTarget(int32_t target_x, int32_t target_y, uint16_t color);
+void CleanTarget(int32_t target_x, int32_t target_y);
 
 #endif /* TOUCHSCREEN_H_ */

@@ -50,8 +50,8 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-uint32_t x_touch = 0;
-uint32_t y_touch = 0;
+int32_t x_touch = 0;
+int32_t y_touch = 0;
 //previous_x, previous_y;
 int32_t x_ref = 0;
 int32_t y_ref = 0;
@@ -103,36 +103,34 @@ int main(void)
 
   // TouchScreen Init
   TouchScreen_Init();
-  //TouchScreen_Calib();
+  TouchScreen_Calib();
 
   // Square Init
   SquareStruct touch_square;
-  InitSquare(&touch_square, 100, 100, 50, GREEN);
+  InitSquare(&touch_square, 100, 100, 70, GREEN);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  uint16_t i = 0;
+  //uint16_t i = 0;
 
   while (1)
   {
 
 	  if (start_measure != 0) {
 
-		  SetPins(TOUCH_MEASURE_X);
+		  /*SetPins(TOUCH_MEASURE_X);
 		  x_touch = GetTouch_X();
-		  //uint32_t xadc = ADC1_GetValue(ADC_CHANNEL_4);
 		  SetPins(TOUCH_MEASURE_Y);
 		  y_touch = GetTouch_Y();
-		  //uint32_t yadc = ADC1_GetValue(ADC_CHANNEL_1);
-		  SetPins(TOUCH_OFF);
+		  SetPins(TOUCH_OFF);*/
 
-		  /*MeasureCalibXY();
+		  MeasureCalibXY();
 
 		  x_touch = GetCalib_X();
-		  y_touch = GetCalib_Y();*/
+		  y_touch = GetCalib_Y();
 
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("X: %4d Y: %4d\n", x_touch, y_touch);
@@ -185,7 +183,7 @@ int main(void)
 
 	  }
 
-	 // HAL_Delay(50);
+	 //HAL_Delay(30);
 
   /* USER CODE END WHILE */
 
