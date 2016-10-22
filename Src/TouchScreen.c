@@ -31,30 +31,42 @@ TouchScreenStruct ts_h;
 	  ----------------
 	         |
 	        (Y+)
+
+X- -> PA1
+X+ -> PA8
+Y- -> PB10
+Y+ -> PA4
+
 */
 
 void TouchScreen_Init() {
 	// X-
 	x_left.Port = GPIOA;
-	x_left.Pin = GPIO_PIN_4;
+	x_left.Pin = GPIO_PIN_1;
 
 	// X+
-	x_right.Port = GPIOB;
-	x_right.Pin = GPIO_PIN_10;
+	x_right.Port = GPIOA;
+	x_right.Pin = GPIO_PIN_8;
 
 	// Y-
-	y_up.Port = GPIOA;
-	y_up.Pin = GPIO_PIN_8;
+	y_up.Port = GPIOB;
+	y_up.Pin = GPIO_PIN_10;
 
 	// Y+
 	y_down.Port = GPIOA;
-	y_down.Pin = GPIO_PIN_1;
+	y_down.Pin = GPIO_PIN_4;
 
+	ts_h.ax = -0.076;
+	ts_h.bx = 0;
+	ts_h.dx = 270;
 
-
+	ts_h.ay = 0;
+	ts_h.by = 0.097;
+	ts_h.dy = -33;
 }
 
 void TouchScreen_Calib() {
+
 	int32_t x1 = 10;
 	int32_t y1 = 100;
 	int32_t x2 = 77;
@@ -65,11 +77,12 @@ void TouchScreen_Calib() {
 	SetPins(TOUCH_OFF);
 	LCD_SetCursor(20,150);
 	LCD_Printf("Starting calibration process...");
+
 	HAL_Delay(1500);
+
 	LCD_SetCursor(0,0);
 	LCD_FillScreen(BLACK);
 	LCD_Printf("SET FIRST POINT   ");
-	//LCD_DrawPixel(x1,y1);
 	DrawTarget(x1,y1,WHITE);
 	SetPins(TOUCH_DETECT);
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
@@ -82,8 +95,10 @@ void TouchScreen_Calib() {
 	HAL_Delay(500);
 	CleanTarget(x1,y1);
 
-	LCD_SetCursor(0,0);
+
 	HAL_Delay(1000);
+
+	LCD_SetCursor(0,0);
 	LCD_Printf("SET SECOND POINT   ");
 	DrawTarget(x2,y2,WHITE);
 	SetPins(TOUCH_DETECT);
@@ -97,10 +112,10 @@ void TouchScreen_Calib() {
 	HAL_Delay(500);
 	CleanTarget(x2,y2);
 
-	LCD_SetCursor(0,0);
 	HAL_Delay(1000);
+
+	LCD_SetCursor(0,0);
 	LCD_Printf("SET THIRD POINT   ");
-	//LCD_DrawPixel(x3,y3);
 	DrawTarget(x3,y3,WHITE);
 	SetPins(TOUCH_DETECT);
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
@@ -131,6 +146,7 @@ void TouchScreen_Calib() {
 	int32_t det_y3 = y1*(tx2*ty3-tx3*ty2)-y2*(tx1*ty3-tx3*ty1)+y3*(tx1*ty2-tx2*ty1);
 
 	//LCD_Printf("%d\n%d %d %d\n%d %d %d\n", det,det_x1,det_x2,det_x3,det_y1,det_y2,det_y3);
+
 	ts_h.ax = (float)det_x1/det;
 	ts_h.bx = (float)det_x2/det;
 	ts_h.dx = (float)det_x3/det;
@@ -140,17 +156,14 @@ void TouchScreen_Calib() {
 	ts_h.dy = (float)det_y3/det;
 
 	//LCD_SetCursor(0,200);
-	//char str[500];
-	//sprintf(str, "ax = %.4f\nbx = %.4f\ndx = %.4f\nay = %.4f\nby = %.4f\ndy = %.4f", det_x1/det, ts_h.bx, ts_h.dx, ts_h.ay, ts_h.by, ts_h.dy);
 	//LCD_Printf("ax = %f\nbx = %f\ndx = %f\nay = %f\nby = %f\ndy = %f", ts_h.ax, ts_h.bx, ts_h.dx, ts_h.ay, ts_h.by, ts_h.dy);
-	//sprintf(str, "ax = %.4f\n", ax);
-	//LCD_Printf("%s", str);
-	//LCD_Printf("ax = %f\n", ts_h.ax);
-	HAL_Delay(3000);
+
+	HAL_Delay(1500);
 	LCD_FillScreen(BLACK);
 }
 
 HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state) {
+
 	HAL_GPIO_DeInit(str->Port, str->Pin);
 	GPIO_InitTypeDef GPIO_InitStruct;
 
@@ -205,38 +218,39 @@ HAL_StatusTypeDef ResetTouchScreenPinsState() {
 }
 
 HAL_StatusTypeDef SetPins(TouchScreenState state) {
-	HAL_Delay(3);
+	HAL_Delay(1);
 	switch (state) {
 		case TOUCH_OFF:
-			GPIO_Init();
+			GPIO_Init(); //Refresh LCD GPIOs
 			return HAL_OK;
 		case TOUCH_DETECT:
-			SetGPIOState(&x_left, INPUT_PULLUP_EXTI);
-			SetGPIOState(&x_right, INPUT_NOPULL);
-			SetGPIOState(&y_up, OUTPUT_RESET);
-			SetGPIOState(&y_down, INPUT_NOPULL);
-			HAL_Delay(3);
+			SetGPIOState(&y_down, INPUT_PULLUP_EXTI);
+			SetGPIOState(&y_up, INPUT_NOPULL);
+			SetGPIOState(&x_right, OUTPUT_RESET);
+			SetGPIOState(&x_left, INPUT_NOPULL);
+			HAL_Delay(1);
 			return HAL_OK;
 		case TOUCH_MEASURE_X:
-			SetGPIOState(&x_left, INPUT_ADC);
-			SetGPIOState(&x_right, INPUT_NOPULL);
-			SetGPIOState(&y_up, OUTPUT_SET);
-			SetGPIOState(&y_down, OUTPUT_RESET);
-			HAL_Delay(3);
-			return HAL_OK;
-		case TOUCH_MEASURE_Y:
 			SetGPIOState(&x_left, OUTPUT_RESET);
 			SetGPIOState(&x_right, OUTPUT_SET);
 			SetGPIOState(&y_up, INPUT_NOPULL);
 			SetGPIOState(&y_down, INPUT_ADC);
-			HAL_Delay(3);
+			HAL_Delay(1);
+			return HAL_OK;
+		case TOUCH_MEASURE_Y:
+			SetGPIOState(&x_left, INPUT_ADC);
+			SetGPIOState(&x_right, INPUT_NOPULL);
+			SetGPIOState(&y_up, OUTPUT_SET);
+			SetGPIOState(&y_down, OUTPUT_RESET);
+			HAL_Delay(1);
 			return HAL_OK;
 		default:
 			return HAL_ERROR;
 	}
 }
 
-int32_t GetTouch_X() {
+//Old method
+/*int32_t GetTouch_X() {
 	int32_t x_val = (X_BORDER-(ADC1_GetValue(ADC_CHANNEL_4)-X_B)/(X_A));
 	return (int32_t) x_val;
 }
@@ -244,7 +258,7 @@ int32_t GetTouch_X() {
 int32_t GetTouch_Y() {
 	int32_t y_val = ((ADC1_GetValue(ADC_CHANNEL_1)-Y_B)/(Y_A));
 	return (int32_t) y_val;
-}
+}*/
 
 void MeasureCalibXY() {
 
@@ -253,6 +267,7 @@ void MeasureCalibXY() {
 	  SetPins(TOUCH_MEASURE_Y);
 	  uint32_t y_t = ADC1_GetValue(ADC_CHANNEL_1);
 	  SetPins(TOUCH_OFF);
+
 	  x = ts_h.ax*x_t + ts_h.bx*y_t + ts_h.dx;
 	  y = ts_h.ay*x_t + ts_h.by*y_t + ts_h.dy;
 

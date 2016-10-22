@@ -12,6 +12,7 @@
 #include "display\lcd.h"
 
 #define BACKGROUND_COLOR BLACK
+#define BORDER_DISTANCE 20
 
 typedef enum {
 	CATCH = 1,
@@ -23,9 +24,6 @@ typedef struct {
 	volatile int32_t y;
 	int32_t edge;
 	uint16_t color;
-	//uint8_t move;
-	//uint32_t touch_point_x;
-	//uint32_t touch_point_y;
 	SquareCatchStatus state;
 } SquareStruct;
 

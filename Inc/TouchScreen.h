@@ -25,8 +25,6 @@ typedef struct {
 
 typedef struct {
 	volatile int32_t x, y;
-	//uint32_t tx, ty;
-	//uint32_t x_border, y_border;
 	float ax, ay;
 	float bx, by;
 	float dx, dy;
@@ -54,8 +52,11 @@ HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
 HAL_StatusTypeDef ResetTouchScreenPinsState();
 HAL_StatusTypeDef SetPins(TouchScreenState state);
 
+//Old method
+/*
 int32_t GetTouch_X();
 int32_t GetTouch_Y();
+*/
 
 void MeasureCalibXY();
 

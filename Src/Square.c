@@ -13,9 +13,6 @@ void InitSquare(SquareStruct* sq, int32_t sq_x, int32_t sq_y, int32_t sq_edge, u
 	sq->y = sq_y;
 	sq->edge = sq_edge;
 	sq->color = sq_color;
-	//sq->move = RESET;
-	//sq->touch_point_x = 0;
-	//sq->touch_point_y = 0;
 	PrintSquare(sq);
 }
 
@@ -29,13 +26,16 @@ void ClearSquare(SquareStruct* sq) {
 
 void MoveSquare(SquareStruct* sq, int32_t mx, int32_t my) {
 	ClearSquare(sq);
+	if (mx <= BORDER_DISTANCE-sq->edge) mx = BORDER_DISTANCE-sq->edge;
+	else if (mx>=X_BORDER-BORDER_DISTANCE) mx = X_BORDER - BORDER_DISTANCE;
+	if (my <= BORDER_DISTANCE-sq->edge) my = BORDER_DISTANCE-sq->edge;
+	else if (my>=Y_BORDER-BORDER_DISTANCE) my = Y_BORDER - BORDER_DISTANCE;
 	sq->x = mx;
 	sq->y = my;
 	PrintSquare(sq);
 }
 
 int8_t IsSquareSelect(SquareStruct* sq, int32_t x, int32_t y) {
-	//uint32_t x = GetTouch_X
 	if (x>=sq->x && x<=sq->x+sq->edge && y>=sq->y && y<=sq->y+sq->edge) return 1;
 	else return 0;
 }

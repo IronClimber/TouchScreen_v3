@@ -52,12 +52,12 @@
 
 int32_t x_touch = 0;
 int32_t y_touch = 0;
-//previous_x, previous_y;
+
 int32_t x_ref = 0;
 int32_t y_ref = 0;
 
 volatile uint8_t start_measure = 0;
-//uint8_t touch_continue = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -114,19 +114,19 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  //uint16_t i = 0;
-
   while (1)
   {
 
 	  if (start_measure != 0) {
 
+		  //Old method
 		  /*SetPins(TOUCH_MEASURE_X);
 		  x_touch = GetTouch_X();
 		  SetPins(TOUCH_MEASURE_Y);
 		  y_touch = GetTouch_Y();
 		  SetPins(TOUCH_OFF);*/
 
+		  //New method
 		  MeasureCalibXY();
 
 		  x_touch = GetCalib_X();
@@ -135,39 +135,18 @@ int main(void)
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("X: %4d Y: %4d\n", x_touch, y_touch);
 		  LCD_Printf("SX: %4d SY: %4d\n", touch_square.x, touch_square.y);
-		  //LCD_Printf("xadc %d yadc %d", xadc, yadc);
 
 		  if (!IsCatch(&touch_square) && IsSquareSelect(&touch_square, x_touch, y_touch)) {
-			  //LCD_Printf("Square Select: +\n");
-			  //CatchSquare(&touch_square);
-			  /*if (touch_square.move == RESET) {
-				  i++;
-				  LCD_Printf("i=%d", i);
-				  //MoveSquare(&touch_square, x_touch-y_ref, y_touch-x_ref);
-				  touch_square.move = SET;*/
 
 				  x_ref = x_touch-touch_square.x;
 				  y_ref = y_touch-touch_square.y;
 
-				  //LCD_Printf("x_ref = %d y_ref = %d       \n", x_ref, y_ref);
 				  CatchSquare(&touch_square);
-			  }
-
-			/*  else {
-
-
-				  MoveSquare(&touch_square, x_touch-x_ref, y_touch-y_ref);
-
-			  }*/
-		  if (IsCatch(&touch_square)) {
-			  MoveSquare(&touch_square, x_touch-x_ref, y_touch-y_ref);
 		  }
-		 /* else {
-			  //touch_square.move = RESET;
-			  LCD_Printf("Square Select: -\n");
 
-		  }*/
-		  //LCD_Printf("Square Move Status: %d   \n", touch_square.move);
+		  if (IsCatch(&touch_square))
+			  MoveSquare(&touch_square, x_touch-x_ref, y_touch-y_ref);
+
 		  start_measure = 0;
 		  SetPins(TOUCH_DETECT);
 
@@ -178,12 +157,9 @@ int main(void)
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("NOT TOUCH           \n");
 		  LCD_Printf("SX: %4d SY: %4d\n", touch_square.x, touch_square.y);
-		  //touch_square.move = RESET;
 		  SetPins(TOUCH_DETECT);
 
 	  }
-
-	 //HAL_Delay(30);
 
   /* USER CODE END WHILE */
 
