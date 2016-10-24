@@ -40,7 +40,7 @@ typedef enum {
 
 typedef enum {
 	TOUCH_OFF = 0,
-	TOUCH_DETECT = 1,
+	TOUCH_ON = 1,
 	TOUCH_MEASURE_X = 2,
 	TOUCH_MEASURE_Y = 3
 } TouchScreenState;
@@ -58,7 +58,7 @@ int32_t GetTouch_X();
 int32_t GetTouch_Y();
 */
 
-void MeasureCalibXY();
+void MeasureCalibXY(int32_t* tx, int32_t* ty);
 
 int32_t GetCalib_X();
 int32_t GetCalib_Y();
