@@ -127,10 +127,12 @@ int main(void)
 		  SetPins(TOUCH_OFF);*/
 
 		  //New method
-		  MeasureCalibXY();
-		  //test
-		  x_touch = GetCalib_X();
-		  y_touch = GetCalib_Y();
+		  //
+		  MeasureCalibXY(&x_touch, &y_touch);
+		  SetPins(TOUCH_OFF);
+
+		  //x_touch = GetCalib_X();
+		  //y_touch = GetCalib_Y();
 
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("X: %4d Y: %4d\n", x_touch, y_touch);
@@ -148,7 +150,7 @@ int main(void)
 			  MoveSquare(&touch_square, x_touch-x_ref, y_touch-y_ref);
 
 		  start_measure = 0;
-		  SetPins(TOUCH_DETECT);
+		  SetPins(TOUCH_ON);
 
 	  } else {
 
@@ -157,7 +159,7 @@ int main(void)
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("NOT TOUCH           \n");
 		  LCD_Printf("SX: %4d SY: %4d\n", touch_square.x, touch_square.y);
-		  SetPins(TOUCH_DETECT);
+		  SetPins(TOUCH_ON);
 
 	  }
 
