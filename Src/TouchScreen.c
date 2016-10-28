@@ -15,7 +15,9 @@ volatile static int32_t x = 0;
 volatile static int32_t y = 0;
 
 TouchScreenStruct ts_h;
+
 /*Set TouchScreen Pins
+
 	  	  	(Y-)
 	  	  	 |
 	  ----------------
@@ -56,6 +58,7 @@ void TouchScreen_Init() {
 	y_down.Port = GPIOA;
 	y_down.Pin = GPIO_PIN_4;
 
+	//default coefficients
 	ts_h.ax = -0.076;
 	ts_h.bx = 0;
 	ts_h.dx = 270;
@@ -65,16 +68,21 @@ void TouchScreen_Init() {
 	ts_h.dy = -33;
 }
 
-void TouchScreen_Calib() {
+void TouchScreen_Calib_3Points() {
 
-	int32_t x1 = 10;
+    int32_t x1 = 10;
 	int32_t y1 = 100;
+
 	int32_t x2 = 77;
 	int32_t y2 = 300;
+
 	int32_t x3 = 200;
 	int32_t y3 = 15;
 
-	SetPins(TOUCH_OFF);
+	uint32_t tx1, tx2, tx3, ty1, ty2, ty3;
+
+	TouchScreen_SetPins(TOUCH_OFF);
+
 	LCD_SetCursor(20,150);
 	LCD_Printf("Starting calibration process...");
 
@@ -83,52 +91,25 @@ void TouchScreen_Calib() {
 	LCD_SetCursor(0,0);
 	LCD_FillScreen(BLACK);
 	LCD_Printf("SET FIRST POINT   ");
-	DrawTarget(x1,y1,WHITE);
-	SetPins(TOUCH_ON);
-	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
-	SetPins(TOUCH_MEASURE_X);
-	uint32_t tx1 = ADC1_GetValue(ADC_CHANNEL_4);
-	SetPins(TOUCH_MEASURE_Y);
-	uint32_t ty1 = ADC1_GetValue(ADC_CHANNEL_1);
-	SetPins(TOUCH_OFF);
-	DrawTarget(x1,y1,RED);
-	HAL_Delay(500);
-	CleanTarget(x1,y1);
 
+	TouchScreen_ReadTarget(x1, y1, &tx1, &ty1);
 
 	HAL_Delay(1000);
 
 	LCD_SetCursor(0,0);
 	LCD_Printf("SET SECOND POINT   ");
-	DrawTarget(x2,y2,WHITE);
-	SetPins(TOUCH_ON);
-	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
-	SetPins(TOUCH_MEASURE_X);
-	uint32_t tx2 = ADC1_GetValue(ADC_CHANNEL_4);
-	SetPins(TOUCH_MEASURE_Y);
-	uint32_t ty2 = ADC1_GetValue(ADC_CHANNEL_1);
-	SetPins(TOUCH_OFF);
-	DrawTarget(x2,y2,RED);
-	HAL_Delay(500);
-	CleanTarget(x2,y2);
+
+	TouchScreen_ReadTarget(x2, y2, &tx2, &ty2);
 
 	HAL_Delay(1000);
 
 	LCD_SetCursor(0,0);
 	LCD_Printf("SET THIRD POINT   ");
-	DrawTarget(x3,y3,WHITE);
-	SetPins(TOUCH_ON);
-	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); //?? общая функция
-	SetPins(TOUCH_MEASURE_X);
-	uint32_t tx3 = ADC1_GetValue(ADC_CHANNEL_4);
-	SetPins(TOUCH_MEASURE_Y);
-	uint32_t ty3 = ADC1_GetValue(ADC_CHANNEL_1);
-	SetPins(TOUCH_OFF);
-	DrawTarget(x3,y3,RED);
-	HAL_Delay(500);
-	CleanTarget(x3,y3);
+
+	TouchScreen_ReadTarget(x3, y3, &tx3, &ty3);
 
 	HAL_Delay(1000);
+
 	LCD_FillScreen(BLACK);
 	LCD_SetCursor(100,150);
 	LCD_Printf("Waiting...");
@@ -137,7 +118,7 @@ void TouchScreen_Calib() {
 	//LCD_Printf("%d %d %d %d\n%d %d %d %d\n%d %d %d %d\n",x1,y1,tx1,tx2,x2,y2,tx2,ty2,x3,y3,tx3,ty3);
 
 	// define parameters
-	int32_t det =    (tx1-tx3)*(ty2-ty3)-(tx2-tx3)*(ty1-ty3);
+	int32_t det    = (tx1-tx3)*(ty2-ty3)-(tx2-tx3)*(ty1-ty3);
 	int32_t det_x1 = (x1-x3)*(ty2-ty3)-(x2-x3)*(ty1-ty3);
 	int32_t det_x2 = (tx1-tx3)*(x2-x3)-(tx2-tx3)*(x1-x3);
 	int32_t det_x3 = x1*(tx2*ty3-tx3*ty2)-x2*(tx1*ty3-tx3*ty1)+x3*(tx1*ty2-tx2*ty1);
@@ -147,13 +128,7 @@ void TouchScreen_Calib() {
 
 	//LCD_Printf("%d\n%d %d %d\n%d %d %d\n", det,det_x1,det_x2,det_x3,det_y1,det_y2,det_y3);
 
-	ts_h.ax = (float)det_x1/det;
-	ts_h.bx = (float)det_x2/det;
-	ts_h.dx = (float)det_x3/det;
-
-	ts_h.ay = (float)det_y1/det;
-	ts_h.by = (float)det_y2/det;
-	ts_h.dy = (float)det_y3/det;
+	TouchScreen_CalculateCoefficients(det, det_x1, det_x2, det_x3, det_y1, det_y2, det_y3);
 
 	//LCD_SetCursor(0,200);
 	//LCD_Printf("ax = %f\nbx = %f\ndx = %f\nay = %f\nby = %f\ndy = %f", ts_h.ax, ts_h.bx, ts_h.dx, ts_h.ay, ts_h.by, ts_h.dy);
@@ -162,7 +137,73 @@ void TouchScreen_Calib() {
 	LCD_FillScreen(BLACK);
 }
 
-HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state) {
+void TouchScreen_Calib_5Points() {
+
+	//XY test points
+	uint32_t kx[CALIB_POINTS_QUANTITY] = {CALIB_BORDER_SPACING, X_BORDER-CALIB_BORDER_SPACING, X_BORDER/2, CALIB_BORDER_SPACING, X_BORDER-CALIB_BORDER_SPACING};
+	uint32_t ky[CALIB_POINTS_QUANTITY] = {CALIB_BORDER_SPACING, CALIB_BORDER_SPACING, Y_BORDER/2, Y_BORDER-CALIB_BORDER_SPACING, Y_BORDER-CALIB_BORDER_SPACING};
+
+	//XY ADC result array
+	uint32_t kx_t[CALIB_POINTS_QUANTITY];
+	uint32_t ky_t[CALIB_POINTS_QUANTITY];
+
+	TouchScreen_SetPins(TOUCH_OFF);
+
+	LCD_SetCursor(20,150);
+	LCD_Printf("Starting calibration process...");
+
+	HAL_Delay(1500);
+
+	uint8_t i;
+
+	for (i=0; i<CALIB_POINTS_QUANTITY; i++) {
+
+		LCD_SetCursor(0,0);
+		LCD_FillScreen(BLACK);
+		LCD_Printf("SET POINT %d ", i+1);
+
+		TouchScreen_ReadTarget(kx[i], ky[i], &kx_t[i], &ky_t[i]);
+
+		HAL_Delay(1000);
+	}
+
+	LCD_FillScreen(BLACK);
+	LCD_SetCursor(100,150);
+	LCD_Printf("Waiting...");
+
+	uint8_t n = CALIB_POINTS_QUANTITY;
+
+	uint64_t a = MultiplyAndSum(kx_t, kx_t);
+	uint64_t b = MultiplyAndSum(ky_t, ky_t);
+	uint64_t c = MultiplyAndSum(kx_t, ky_t);
+	uint64_t d = Sum(kx_t);
+	uint64_t e = Sum(ky_t);
+
+	//LCD_Printf("\n\n%d %d %d %d %d", a,b,c,d,e);
+
+	uint64_t X1 = MultiplyAndSum(kx_t, kx);
+	uint64_t X2 = MultiplyAndSum(ky_t, kx);
+	uint64_t X3 = Sum(kx);
+	uint64_t Y1 = MultiplyAndSum(kx_t, ky);
+	uint64_t Y2 = MultiplyAndSum(ky_t, ky);
+	uint64_t Y3 = Sum(ky);
+
+	// define parameters
+	int64_t det    = n*(a*b-c*c)+2*c*d*e-a*e*e-b*d*d;
+	int64_t det_x1 = n*(X1*b-X2*c)+e*(X2*d-X1*e)+X3*(c*e-b*d);
+	int64_t det_x2 = n*(X2*a-X1*c)+d*(X1*e-X2*d)+X3*(c*d-a*e);
+	int64_t det_x3 = X3*(a*b-c*c)+X1*(c*e-b*d)+X2*(c*d-a*e);
+	int64_t det_y1 = n*(Y1*b-Y2*c)+e*(Y2*d-Y1*e)+Y3*(c*e-b*d);
+	int64_t det_y2 = n*(Y2*a-Y1*c)+d*(Y1*e-Y2*d)+Y3*(c*d-a*e);
+	int64_t det_y3 = Y3*(a*b-c*c)+Y1*(c*e-b*d)+Y2*(c*d-a*e);
+
+	TouchScreen_CalculateCoefficients(det, det_x1, det_x2, det_x3, det_y1, det_y2, det_y3);
+
+	HAL_Delay(1500);
+	LCD_FillScreen(BLACK);
+}
+
+HAL_StatusTypeDef TouchScreen_SetGPIOState(GPIOStruct* str, GPIOState state) {
 
 	HAL_GPIO_DeInit(str->Port, str->Pin);
 	GPIO_InitTypeDef GPIO_InitStruct;
@@ -209,7 +250,7 @@ HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state) {
 	}
 }
 
-HAL_StatusTypeDef ResetTouchScreenPinsState() {
+HAL_StatusTypeDef TouchScreen_ResetPinsState() {
 	HAL_GPIO_DeInit(x_left.Port, x_left.Pin);
 	HAL_GPIO_DeInit(x_right.Port, x_right.Pin);
 	HAL_GPIO_DeInit(y_up.Port, y_up.Pin);
@@ -217,31 +258,31 @@ HAL_StatusTypeDef ResetTouchScreenPinsState() {
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef SetPins(TouchScreenState state) {
-	HAL_Delay(1);
+HAL_StatusTypeDef TouchScreen_SetPins(TouchScreenState state) {
 	switch (state) {
 		case TOUCH_OFF:
-			GPIO_Init(); //Refresh LCD GPIOs
+			GPIO_Init(); //Refresh LCD GPIOs. This function from LCD driver.
+			HAL_Delay(1);
 			return HAL_OK;
 		case TOUCH_ON:
-			SetGPIOState(&y_down, INPUT_PULLUP_EXTI);
-			SetGPIOState(&y_up, INPUT_NOPULL);
-			SetGPIOState(&x_right, OUTPUT_RESET);
-			SetGPIOState(&x_left, INPUT_NOPULL);
+			TouchScreen_SetGPIOState(&y_down, INPUT_PULLUP_EXTI);
+			TouchScreen_SetGPIOState(&y_up, INPUT_NOPULL);
+			TouchScreen_SetGPIOState(&x_right, OUTPUT_RESET);
+			TouchScreen_SetGPIOState(&x_left, INPUT_NOPULL);
 			HAL_Delay(1);
 			return HAL_OK;
 		case TOUCH_MEASURE_X:
-			SetGPIOState(&x_left, OUTPUT_RESET);
-			SetGPIOState(&x_right, OUTPUT_SET);
-			SetGPIOState(&y_up, INPUT_NOPULL);
-			SetGPIOState(&y_down, INPUT_ADC);
+			TouchScreen_SetGPIOState(&x_left, OUTPUT_RESET);
+			TouchScreen_SetGPIOState(&x_right, OUTPUT_SET);
+			TouchScreen_SetGPIOState(&y_up, INPUT_NOPULL);
+			TouchScreen_SetGPIOState(&y_down, INPUT_ADC);
 			HAL_Delay(1);
 			return HAL_OK;
 		case TOUCH_MEASURE_Y:
-			SetGPIOState(&x_left, INPUT_ADC);
-			SetGPIOState(&x_right, INPUT_NOPULL);
-			SetGPIOState(&y_up, OUTPUT_SET);
-			SetGPIOState(&y_down, OUTPUT_RESET);
+			TouchScreen_SetGPIOState(&x_left, INPUT_ADC);
+			TouchScreen_SetGPIOState(&x_right, INPUT_NOPULL);
+			TouchScreen_SetGPIOState(&y_up, OUTPUT_SET);
+			TouchScreen_SetGPIOState(&y_down, OUTPUT_RESET);
 			HAL_Delay(1);
 			return HAL_OK;
 		default:
@@ -249,22 +290,11 @@ HAL_StatusTypeDef SetPins(TouchScreenState state) {
 	}
 }
 
-//Old method
-/*int32_t GetTouch_X() {
-	int32_t x_val = (X_BORDER-(ADC1_GetValue(ADC_CHANNEL_4)-X_B)/(X_A));
-	return (int32_t) x_val;
-}
+void TouchScreen_ReadXY(int32_t* tx, int32_t* ty) {
 
-int32_t GetTouch_Y() {
-	int32_t y_val = ((ADC1_GetValue(ADC_CHANNEL_1)-Y_B)/(Y_A));
-	return (int32_t) y_val;
-}*/
-
-void MeasureCalibXY(int32_t* tx, int32_t* ty) {
-
-	  SetPins(TOUCH_MEASURE_X);
+	  TouchScreen_SetPins(TOUCH_MEASURE_X);
 	  uint32_t x_t = ADC1_GetValue(ADC_CHANNEL_4);
-	  SetPins(TOUCH_MEASURE_Y);
+	  TouchScreen_SetPins(TOUCH_MEASURE_Y);
 	  uint32_t y_t = ADC1_GetValue(ADC_CHANNEL_1);
 
 	  x = ts_h.ax*x_t + ts_h.bx*y_t + ts_h.dx;
@@ -274,21 +304,66 @@ void MeasureCalibXY(int32_t* tx, int32_t* ty) {
 	  *ty = y;
 }
 
-int32_t GetCalib_X() {
+int32_t TouchScreen_GetX() {
 	return x;
 }
 
-int32_t GetCalib_Y() {
+int32_t TouchScreen_GetY() {
 	return y;
 }
 
-void DrawTarget(int32_t target_x, int32_t target_y, uint16_t color) {
+static void TouchScreen_ReadTarget(int32_t x, int32_t y, uint32_t* tx, uint32_t* ty) {
+	TouchScreen_DrawTarget(x,y,WHITE);
+	TouchScreen_SetPins(TOUCH_ON);
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) != 0) HAL_Delay(50); // waiting for touch
+	TouchScreen_SetPins(TOUCH_MEASURE_X);
+	*tx = ADC1_GetValue(ADC_CHANNEL_4);
+	TouchScreen_SetPins(TOUCH_MEASURE_Y);
+	*ty = ADC1_GetValue(ADC_CHANNEL_1);
+	TouchScreen_SetPins(TOUCH_OFF);
+	TouchScreen_DrawTarget(x,y,RED);
+	HAL_Delay(500);
+	TouchScreen_CleanTarget(x,y);
+}
+
+
+static void TouchScreen_CalculateCoefficients(int64_t delta, int64_t delta_x1, int64_t delta_x2,
+		int64_t delta_x3, int64_t delta_y1, int64_t delta_y2, int64_t delta_y3) {
+
+	ts_h.ax = (float)delta_x1/delta;
+	ts_h.bx = (float)delta_x2/delta;
+	ts_h.dx = (float)delta_x3/delta;
+
+	ts_h.ay = (float)delta_y1/delta;
+	ts_h.by = (float)delta_y2/delta;
+	ts_h.dy = (float)delta_y3/delta;
+
+}
+
+static void TouchScreen_DrawTarget(int32_t target_x, int32_t target_y, uint16_t color) {
 	LCD_DrawFastHLine(target_x-4, target_y, 9, color);
 	LCD_DrawFastVLine(target_x, target_y-4, 9, color);
 }
 
-void CleanTarget(int32_t target_x, int32_t target_y) {
+static void TouchScreen_CleanTarget(int32_t target_x, int32_t target_y) {
 	LCD_DrawFastHLine(target_x-4, target_y, 9, BLACK);
 	LCD_DrawFastVLine(target_x, target_y-4, 9, BLACK);
 }
 
+static uint32_t Sum(uint32_t* matrix) {
+	uint32_t sum = 0;
+	uint8_t i = 0;
+	for (i=0; i<CALIB_POINTS_QUANTITY; i++) {
+		sum += matrix[i];
+	}
+	return sum;
+}
+
+static uint32_t MultiplyAndSum(uint32_t* m1, uint32_t* m2) {
+	uint32_t sum = 0;
+	uint8_t i = 0;
+	for (i=0; i<CALIB_POINTS_QUANTITY; i++) {
+		sum += m1[i]*m2[i];
+	}
+	return sum;
+}

@@ -18,6 +18,9 @@
 #define X_BORDER 240
 #define Y_BORDER 320
 
+#define CALIB_BORDER_SPACING 20
+#define CALIB_POINTS_QUANTITY 5
+
 typedef struct {
 	GPIO_TypeDef* Port;
 	uint16_t Pin;
@@ -46,24 +49,27 @@ typedef enum {
 } TouchScreenState;
 
 void TouchScreen_Init();
-void TouchScreen_Calib();
 
-HAL_StatusTypeDef SetGPIOState(GPIOStruct* str, GPIOState state);
-HAL_StatusTypeDef ResetTouchScreenPinsState();
-HAL_StatusTypeDef SetPins(TouchScreenState state);
+void TouchScreen_ReadXY(int32_t* tx, int32_t* ty);
+int32_t TouchScreen_GetX();
+int32_t TouchScreen_GetY();
 
-//Old method
-/*
-int32_t GetTouch_X();
-int32_t GetTouch_Y();
-*/
+HAL_StatusTypeDef TouchScreen_SetGPIOState(GPIOStruct* str, GPIOState state);
+HAL_StatusTypeDef TouchScreen_ResetPinsState();
+HAL_StatusTypeDef TouchScreen_SetPins(TouchScreenState state);
 
-void MeasureCalibXY(int32_t* tx, int32_t* ty);
+void TouchScreen_Calib_3Points();
+void TouchScreen_Calib_5Points();
 
-int32_t GetCalib_X();
-int32_t GetCalib_Y();
+static uint32_t Sum(uint32_t* matrix);
+static uint32_t MultiplyAndSum(uint32_t*m1, uint32_t* m2);
 
-void DrawTarget(int32_t target_x, int32_t target_y, uint16_t color);
-void CleanTarget(int32_t target_x, int32_t target_y);
+static void TouchScreen_CalculateCoefficients(int64_t delta,
+		int64_t delta_x1, int64_t delta_x2, int64_t delta_x3,
+		int64_t delta_y1, int64_t delta_y2, int64_t delta_y3);
+
+static void TouchScreen_ReadTarget(int32_t x, int32_t y, uint32_t* tx, uint32_t* ty);
+static void TouchScreen_DrawTarget(int32_t target_x, int32_t target_y, uint16_t color);
+static void TouchScreen_CleanTarget(int32_t target_x, int32_t target_y);
 
 #endif /* TOUCHSCREEN_H_ */

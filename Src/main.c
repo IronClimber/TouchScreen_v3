@@ -103,7 +103,7 @@ int main(void)
 
   // TouchScreen Init
   TouchScreen_Init();
-  TouchScreen_Calib();
+  TouchScreen_Calib_5Points();
 
   // Square Init
   SquareStruct touch_square;
@@ -119,20 +119,8 @@ int main(void)
 
 	  if (start_measure != 0) {
 
-		  //Old method
-		  /*SetPins(TOUCH_MEASURE_X);
-		  x_touch = GetTouch_X();
-		  SetPins(TOUCH_MEASURE_Y);
-		  y_touch = GetTouch_Y();
-		  SetPins(TOUCH_OFF);*/
-
-		  //New method
-		  //
-		  MeasureCalibXY(&x_touch, &y_touch);
-		  SetPins(TOUCH_OFF);
-
-		  //x_touch = GetCalib_X();
-		  //y_touch = GetCalib_Y();
+		  TouchScreen_ReadXY(&x_touch, &y_touch);
+		  TouchScreen_SetPins(TOUCH_OFF);
 
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("X: %4d Y: %4d\n", x_touch, y_touch);
@@ -150,18 +138,21 @@ int main(void)
 			  MoveSquare(&touch_square, x_touch-x_ref, y_touch-y_ref);
 
 		  start_measure = 0;
-		  SetPins(TOUCH_ON);
+		  TouchScreen_SetPins(TOUCH_ON);
 
 	  } else {
 
-		  SetPins(TOUCH_OFF);
+		  TouchScreen_SetPins(TOUCH_OFF);
 		  ReleaseSquare(&touch_square);
 		  LCD_SetCursor(0,0);
 		  LCD_Printf("NOT TOUCH           \n");
 		  LCD_Printf("SX: %4d SY: %4d\n", touch_square.x, touch_square.y);
-		  SetPins(TOUCH_ON);
+		  TouchScreen_SetPins(TOUCH_ON);
 
 	  }
+
+	  //It also works without delay
+	  HAL_Delay(50);
 
   /* USER CODE END WHILE */
 
